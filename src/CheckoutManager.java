@@ -3,6 +3,7 @@
  * CEN 3024 - Software Development 1
  * July 15, 2025
  * CheckoutManager.java
+ *
  * This class manages all SQLite database operations for the Audio Gear Checkout System.
  * It supports adding, deleting, loading, updating (returned status), and listing overdue gear records.
  */
@@ -13,10 +14,12 @@ import java.util.ArrayList;
 public class CheckoutManager {
     private Connection conn;
 
-    // constructor
-    // purpose: establishes SQLite connection using the user-supplied path
-    // parameters: dbPath - full path to SQLite .db file
-    // return: none
+    /**
+     * constructor
+     * purpose: establishes SQLite connection using the user-supplied path
+     * parameters: dbPath - full path to SQLite .db file
+     * return: none
+     */
     public CheckoutManager(String dbPath) {
         try {
             conn = DriverManager.getConnection("jdbc:sqlite:" + dbPath);
@@ -26,10 +29,12 @@ public class CheckoutManager {
         }
     }
 
-    // method: createTableIfNotExists
-    // purpose: creates the checkout_records table if it doesn't already exist
-    // parameters: none
-    // return: void
+    /**
+     * method: createTableIfNotExists
+     * purpose: creates the checkout_records table if it doesn't already exist
+     * parameters: none
+     * return: void
+     */
     private void createTableIfNotExists() {
         String sql = "CREATE TABLE IF NOT EXISTS checkout_records (" +
                 "name TEXT NOT NULL," +
@@ -44,10 +49,17 @@ public class CheckoutManager {
         }
     }
 
-    // method: addRecord
-    // purpose: inserts a new checkout record into the database
-    // parameters: name, gear, checkoutDate, dueDate, returned (all Strings)
-    // return: void
+    /**
+     * method: addRecord
+     * purpose: inserts a new checkout record into the database
+     * parameters:
+     *   name - person checking out the gear
+     *   gear - item being checked out
+     *   checkoutDate - date gear was checked out
+     *   dueDate - expected return date
+     *   returned - whether gear was returned ("Yes"/"No")
+     * return: void
+     */
     public void addRecord(String name, String gear, String checkoutDate, String dueDate, String returned) {
         String sql = "INSERT INTO checkout_records (name, gear, checkoutDate, dueDate, returned) VALUES (?, ?, ?, ?, ?)";
         try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -62,10 +74,12 @@ public class CheckoutManager {
         }
     }
 
-    // method: loadAllRecords
-    // purpose: retrieves all records from the database
-    // parameters: none
-    // return: ArrayList<String[]> containing all records
+    /**
+     * method: loadAllRecords
+     * purpose: retrieves all records from the database
+     * parameters: none
+     * return: ArrayList<String[]> containing all records
+     */
     public ArrayList<String[]> loadAllRecords() {
         ArrayList<String[]> records = new ArrayList<>();
         String sql = "SELECT name, gear, checkoutDate, dueDate, returned FROM checkout_records";
@@ -87,10 +101,15 @@ public class CheckoutManager {
         return records;
     }
 
-    // method: deleteRecord
-    // purpose: deletes a checkout record based on name, gear, and checkout date
-    // parameters: name, gear, checkoutDate (all Strings)
-    // return: void
+    /**
+     * method: deleteRecord
+     * purpose: deletes a checkout record based on name, gear, and checkout date
+     * parameters:
+     *   name - person who checked out the gear
+     *   gear - item checked out
+     *   checkoutDate - date of original checkout
+     * return: void
+     */
     public void deleteRecord(String name, String gear, String checkoutDate) {
         String sql = "DELETE FROM checkout_records WHERE name = ? AND gear = ? AND checkoutDate = ?";
         try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -103,10 +122,12 @@ public class CheckoutManager {
         }
     }
 
-    // method: listOverdueGear
-    // purpose: returns a list of overdue gear items that have not been returned
-    // parameters: today (String date in YYYY-MM-DD format)
-    // return: String report of overdue gear
+    /**
+     * method: listOverdueGear
+     * purpose: returns a list of overdue gear items that have not been returned
+     * parameters: today - current date in YYYY-MM-DD format
+     * return: String report of overdue gear
+     */
     public String listOverdueGear(String today) {
         StringBuilder result = new StringBuilder();
         String sql = "SELECT * FROM checkout_records WHERE dueDate < ? AND returned = 'No'";
@@ -129,10 +150,16 @@ public class CheckoutManager {
         return result.toString();
     }
 
-    // method: updateReturnStatus
-    // purpose: updates the 'returned' status to 'Yes' for a specific record
-    // parameters: name, gear, checkoutDate, returned (all Strings)
-    // return: void
+    /**
+     * method: updateReturnStatus
+     * purpose: updates the 'returned' status to 'Yes' for a specific record
+     * parameters:
+     *   name - person who checked out the gear
+     *   gear - item checked out
+     *   checkoutDate - date of original checkout
+     *   returned - new returned status ("Yes")
+     * return: void
+     */
     public void updateReturnStatus(String name, String gear, String checkoutDate, String returned) {
         String sql = "UPDATE checkout_records SET returned = ? WHERE name = ? AND gear = ? AND checkoutDate = ?";
         try (PreparedStatement pstmt = conn.prepareStatement(sql)) {

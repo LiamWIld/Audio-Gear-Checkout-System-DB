@@ -3,16 +3,23 @@
  * CEN 3024 - Software Development 1
  * July 15, 2025
  * CheckoutGUI.java
- * This class creates a Java Swing GUI to manage gear checkout records.
- * It connects to a user-supplied SQLite database using CheckoutManager
- * and supports adding, deleting, updating (marking returned), and listing overdue gear.
- * Layout and visual spacing have been improved using layout managers.
+ *
+ * The CheckoutGUI class provides a Java Swing graphical user interface
+ * for managing gear checkout records. It connects to a user-supplied
+ * SQLite database via the CheckoutManager class and allows users to:
+ * - Add new records
+ * - Delete existing records
+ * - Update existing records
+ * - Mark records as returned
+ * - List overdue gear
+ *
+ * The GUI layout is organized using layout managers for readability and spacing.
+ * It uses a JTable to display data and validates user input before database operations.
  */
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.awt.event.*;
 import java.time.LocalDate;
 import java.util.ArrayList;
 
@@ -23,10 +30,23 @@ public class CheckoutGUI {
     private JTable table;
     private CheckoutManager manager;
 
+    /**
+     * method: main
+     * purpose: Entry point for launching the GUI application.
+     * parameters: args - command-line arguments (not used)
+     * return: void
+     */
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> new CheckoutGUI().createAndShowGUI());
     }
 
+    /**
+     * method: createAndShowGUI
+     * purpose: Prompts the user for a database path, initializes the GUI frame,
+     *          and displays the main window layout.
+     * parameters: none
+     * return: void
+     */
     private void createAndShowGUI() {
         String dbPath = JOptionPane.showInputDialog(null, "Enter path to SQLite .db file:", "Database Path", JOptionPane.QUESTION_MESSAGE);
         if (dbPath == null || dbPath.trim().isEmpty()) {
@@ -49,6 +69,12 @@ public class CheckoutGUI {
         frame.setVisible(true);
     }
 
+    /**
+     * method: addFormPanel
+     * purpose: Creates and adds labeled text fields to collect checkout information from the user.
+     * parameters: none
+     * return: void
+     */
     private void addFormPanel() {
         JPanel formPanel = new JPanel(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
@@ -90,6 +116,13 @@ public class CheckoutGUI {
         frame.add(formPanel, BorderLayout.NORTH);
     }
 
+    /**
+     * method: addTablePanel
+     * purpose: Adds a JTable inside a scroll pane
+     * to the center of the frame to display all checkout records.
+     * parameters: none
+     * return: void
+     */
     private void addTablePanel() {
         tableModel = new DefaultTableModel(new String[]{"Name", "Gear", "Checkout Date", "Due Date", "Returned"}, 0);
         table = new JTable(tableModel) {
@@ -102,16 +135,25 @@ public class CheckoutGUI {
         frame.add(scrollPane, BorderLayout.CENTER);
     }
 
+    /**
+     * method: addButtonPanel
+     * purpose: Creates all functional buttons (Add, Delete, Update, Overdue, Mark Returned),
+     * defines their behavior, and adds them to the bottom of the GUI.
+     * parameters: none
+     * return: void
+     */
     private void addButtonPanel() {
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 10));
 
         JButton addButton = new JButton("Add");
         JButton deleteButton = new JButton("DELETE");
+        JButton updateButton = new JButton("Update");
         JButton overdueButton = new JButton("Check Overdue Gear");
         JButton markReturnedButton = new JButton("Mark as Returned");
 
         buttonPanel.add(addButton);
         buttonPanel.add(deleteButton);
+        buttonPanel.add(updateButton);
         buttonPanel.add(overdueButton);
         buttonPanel.add(markReturnedButton);
 
@@ -160,6 +202,47 @@ public class CheckoutGUI {
             JOptionPane.showMessageDialog(frame, "Record deleted.");
         });
 
+        // UPDATE
+        updateButton.addActionListener(e -> {
+            int selected = table.getSelectedRow();
+            if (selected == -1) {
+                JOptionPane.showMessageDialog(frame, "Select a record to update.");
+                return;
+            }
+
+            String originalName = (String) tableModel.getValueAt(selected, 0);
+            String originalGear = (String) tableModel.getValueAt(selected, 1);
+            String originalCheckout = (String) tableModel.getValueAt(selected, 2);
+
+            String newName = nameField.getText().trim();
+            String newGear = gearField.getText().trim();
+            String newCheckout = checkoutField.getText().trim();
+            String newDue = dueField.getText().trim();
+            String newReturned = returnedField.getText().trim();
+
+            if (newName.isEmpty() || newGear.isEmpty() || newCheckout.isEmpty() || newDue.isEmpty() || newReturned.isEmpty()) {
+                JOptionPane.showMessageDialog(frame, "Please fill in all fields to update.");
+                return;
+            }
+
+            if (!newCheckout.matches("\\d{4}-\\d{2}-\\d{2}") || !newDue.matches("\\d{4}-\\d{2}-\\d{2}")) {
+                JOptionPane.showMessageDialog(frame, "Dates must be in YYYY-MM-DD format.");
+                return;
+            }
+
+            if (!newReturned.equalsIgnoreCase("Yes") && !newReturned.equalsIgnoreCase("No")) {
+                JOptionPane.showMessageDialog(frame, "Returned field must be 'Yes' or 'No'.");
+                return;
+            }
+
+            manager.deleteRecord(originalName, originalGear, originalCheckout);
+            manager.addRecord(newName, newGear, newCheckout, newDue, newReturned);
+
+            refreshTable();
+            clearForm();
+            JOptionPane.showMessageDialog(frame, "Record updated.");
+        });
+
         // OVERDUE
         overdueButton.addActionListener(e -> {
             String today = LocalDate.now().toString();
@@ -187,19 +270,26 @@ public class CheckoutGUI {
         frame.add(buttonPanel, BorderLayout.SOUTH);
     }
 
-    private void clearForm() {
-        nameField.setText("");
-        gearField.setText("");
-        checkoutField.setText("");
-        dueField.setText("");
-        returnedField.setText("");
-    }
-
+    /**
+     * method: refreshTable
+     * purpose: Reloads data from the database and updates the JTable display.
+     * parameters: none
+     * return: void
+     */
     private void refreshTable() {
         tableModel.setRowCount(0);
         ArrayList<String[]> records = manager.loadAllRecords();
         for (String[] row : records) {
             tableModel.addRow(row);
         }
+    }
+
+    // No Javadoc needed for clearForm (simple helper)
+    private void clearForm() {
+        nameField.setText("");
+        gearField.setText("");
+        checkoutField.setText("");
+        dueField.setText("");
+        returnedField.setText("");
     }
 }
